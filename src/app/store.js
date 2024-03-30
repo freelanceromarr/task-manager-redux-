@@ -1,8 +1,9 @@
 import { configureStore } from '@reduxjs/toolkit';
-import counterReducer from '../features/counter/counterSlice';
+import apiSlice from '../features/createApi';
 
 export const store = configureStore({
   reducer: {
-    counter: counterReducer,
+    [apiSlice.reducerPath]: apiSlice.reducer,
   },
+  middleware: (GDM)=>GDM().concat(apiSlice.middleware)
 });

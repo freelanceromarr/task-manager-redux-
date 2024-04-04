@@ -1,23 +1,36 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGetProjectsQuery } from "../../features/projects/projectApi";
-import {usePostTaskMutation } from "../../features/tasks/taskApi";
+import {taskApi, useGetTaskQuery, usePostTaskMutation, useUpdateTaskMutation } from "../../features/tasks/taskApi";
 import { useGetTeamsQuery } from "../../features/teams/teamApi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { useDispatch } from "react-redux";
 
-const AddTask = () => {
+const EditTask = () => {
     const { data: projects, isLoading, isError, error } = useGetProjectsQuery()
     const { data: teams, isLoading: loading, isError: hasError, error: err } = useGetTeamsQuery()
-    const [postTask, result] = usePostTaskMutation();
-    const navigate = useNavigate()
+    const [updateTask, result ] = useUpdateTaskMutation()
+    const [getTask, setGetTask] = useState(
+        {
+            taskName: '',
+            teamMember: {},
+            project: {},
+            deadline: ''
+        }
+    )
+    const {id:taskId}= useParams();
+
+    const dispatch = useDispatch()
+    const navigate = useNavigate();
+        console.log(getTask);
 
     //form data
-    const [inputs, setInputs] = useState({
-        taskName: '',
-        teamMember: {},
-        project: {},
-        deadline: '',
-        status: 'pending'
-    })
+    // const [inputs, setInputs] = useState({
+    //     taskName: '',
+    //     teamMember: {},
+    //     project: {},
+    //     deadline: '',
+    //     status: 'pending'
+    // })
 
 
     // list of project 
@@ -34,7 +47,7 @@ const AddTask = () => {
     if (!isError && !isLoading && projects?.length > 0) {
         projectContent = projects?.map((project) => {
             const { projectName } = project || {}
-            return <option value={JSON.stringify(project)}>{projectName}</option>
+            return <option value={JSON.stringify(project)} selected={getTask?.project.projectName === projectName && true} >{projectName}</option>
         })
     }
 
@@ -52,34 +65,41 @@ const AddTask = () => {
     if (!isError && !isLoading && teams?.length > 0) {
         teamContent = teams?.map((team) => {
             const { id, name } = team || {};
-            return <option value={JSON.stringify(team)} key={id}>{name}</option>
+            return <option value={JSON.stringify(team)} key={id} selected={getTask?.teamMember.name === name && true} >{name}</option>
         })
     }
 
     //add task handler
-    const addTaskHandler = (e) => {
+    const editTaskHandler = (e) => {
         e.preventDefault();
-        postTask(
-            { 
-            taskName: inputs.taskName, 
-            teamMember: JSON.parse(inputs.teamMember), 
-            project: JSON.parse(inputs.project), 
-            status: inputs.status, 
-            deadline: inputs.deadline 
-            }
-        )
+        updateTask({id:taskId, data: { 
+            taskName: getTask?.taskName, 
+            teamMember: typeof getTask?.teamMember === 'string' ? JSON.parse(getTask?.teamMember) : getTask?.teamMember, 
+            project: typeof getTask?.project === 'string' ? JSON.parse(getTask?.project) : getTask?.project, 
+            deadline: getTask?.deadline 
+            }})
         navigate('/')
 
     }
+
+    //fetch single task for updating
+    useEffect(()=>{
+        dispatch(taskApi.endpoints.getTask.initiate(taskId)).unwrap().then(res=>{
+            setGetTask({...res}) 
+            // console.log(res)
+        })
+        
+        
+    },[ dispatch, taskId])
     return (
         <div class="container relative">
             <main class="relative z-20 max-w-3xl mx-auto rounded-lg xl:max-w-none">
                 <h1 class="mt-4 mb-8 text-3xl font-bold text-center text-gray-800">
-                    Create Task for Your Team
+                    Edit/Update Task for Your Team
                 </h1>
 
                 <div class="justify-center mb-10 space-y-2 md:flex md:space-y-0">
-                    <form class="space-y-6" onSubmit={addTaskHandler}>
+                    <form class="space-y-6" onSubmit={editTaskHandler}>
                         <div class="fieldContainer">
                             <label for="lws-taskName">Task Name</label>
                             <input
@@ -88,14 +108,15 @@ const AddTask = () => {
                                 id="lws-taskName"
                                 required
                                 placeholder="Implement RTK Query"
-                                onChange={e => setInputs({ ...inputs, taskName: e.target.value })}
+                                value={getTask?.taskName}
+                                onChange={e => setGetTask({ ...getTask, taskName: e.target.value })}
                             />
                         </div>
 
                         <div class="fieldContainer">
                             <label>Assign To</label>
                             <select
-                                onChange={e => setInputs({ ...inputs, teamMember: e.target.value })}
+                                onChange={e => setGetTask({ ...getTask, teamMember: e.target.value })}
                                 name="teamMember"
                                 id="lws-teamMember"
                                 required>
@@ -105,7 +126,7 @@ const AddTask = () => {
                         </div>
                         <div class="fieldContainer">
                             <label for="lws-projectName">Project Name</label>
-                            <select id="lws-projectName" name="projectName" required onChange={e => setInputs({ ...inputs, project: e.target.value })}>
+                            <select id="lws-projectName" name="projectName" required onChange={e => setGetTask({ ...getTask, project: e.target.value })}>
                                 <option value="" hidden selected>Select Project</option>
                                 {projectContent}
                             </select>
@@ -113,11 +134,11 @@ const AddTask = () => {
 
                         <div class="fieldContainer">
                             <label for="lws-deadline">Deadline</label>
-                            <input type="date" name="deadline" id="lws-deadline" required onChange={e => setInputs({ ...inputs, deadline: e.target.value })} />
+                            <input type="date" name="deadline" id="lws-deadline" required value={getTask?.deadline} onChange={e => setGetTask({ ...getTask, deadline: e.target.value })} />
                         </div>
 
                         <div class="text-right">
-                            <button type="submit" class="lws-submit bg-purple-700 py-2 px-8 text-white rounded-md">Save</button>
+                            <button type="submit" class="lws-submit bg-purple-700 py-2 px-8 text-white rounded-md">Update</button>
                         </div>
                     </form>
                 </div>
@@ -126,4 +147,4 @@ const AddTask = () => {
     );
 }
 
-export default AddTask;
+export default EditTask;

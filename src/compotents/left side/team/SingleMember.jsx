@@ -1,8 +1,9 @@
-const SingleMember = () => {
+const SingleMember = ({team}) => {
+    const {id, name, avatar} = team || {};
     return (
         <div class="checkbox-container">
-            <img src="./images/avatars/sumit.png" class="team-avater" alt="team" />
-            <p class="label">Sumit Saha</p>
+            <img src={avatar} class="team-avater" alt="team" />
+            <p class="label">{name}</p>
         </div>
     );
 }
